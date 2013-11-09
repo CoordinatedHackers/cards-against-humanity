@@ -103,6 +103,9 @@
 		position: absolute;
 	}
 
+	#hand > .card:nth-child(2n) { -webkit-transform: rotate(-1deg) translateX(-11px); }
+	#hand > .card:nth-child(2n+1) { -webkit-transform: rotate(2deg) translateX(11px); }
+
 	#hand > .card::after {
 		background: white;
 	}
@@ -169,13 +172,6 @@ angular.module('cards', ['ngRoute'])
 			{ name: 'Sidney', score: 0 },
 			{ name: 'Sam', score: 0 }
 		];
-
-		$scope.wiggle = function(min, max){
-			var n = Math.random() * (max - min) + min;
-			return {
-				'-webkit-transform': 'rotate(' + n + 'deg) translateX(' + -n + 'px)'
-			};
-		}
 
 		window.gs = $scope;
 

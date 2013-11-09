@@ -1,6 +1,6 @@
 <div ng-class="{ inRound: inRound }" id="game">
 	<ul id="hand">
-		<li ng-repeat="card in hand" class="card" ng-style="myStyle" ng-init="myStyle = wiggle(-3, 3)">{{card}}</li>
+		<li ng-repeat="card in hand" class="card">{{card}}</li>
 	</ul>
 	<div ng-if="blackCard" id="black">
 		<div class="card">BLACK AS NIGHT</div>
