@@ -1,0 +1,21 @@
+<div ng-class="{ inRound: inRound }" id="game">
+	<ul id="hand">
+		<li ng-repeat="card in hand" class="card" ng-style="myStyle" ng-init="myStyle = wiggle(-3, 3)">{{card}}</li>
+	</ul>
+	<div ng-if="blackCard" id="black">
+		<div class="card">BLACK AS NIGHT</div>
+	</div>
+	<div ng-show="youAreCardCzar" id="czar">
+		<div id="czar_choose">
+			<h2>Your turn:</h2>
+			<button>Draw a card.</button>
+			<button>Write your own card.</button>
+		</div>
+	</div>
+	<table id="scores"><tr>
+		<td ng-repeat="player in players">
+			<div class="score">{{player.score}}</div>
+			<div class="name">{{player.name}}</div>
+		</td>
+	</tr></table>
+</div>
