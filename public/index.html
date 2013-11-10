@@ -201,7 +201,6 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 	// From http://www.html5rocks.com/en/tutorials/frameworks/angular-websockets/
 	.factory('socket', function ($rootScope) {
 		var socket = io.connect();
-		console.log('connect', socket);
 		return {
 			on: function (eventName, callback) {
 				socket.on(eventName, function () {	
@@ -231,9 +230,14 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 	.controller('LobbyCtrl', function ($scope, $location, socket) {
 		$scope.newGame = function(){
 			socket.emit('create_game', null, function(gameID) {
-				console.log(arguments);
 				$location.path('/game/' + encodeURIComponent(gameID));
 			});
+		}
+		$scope.joinGame = function(){
+			var gameID = prompt('What game?');
+			if (gameID) {
+				$location.path('/game/' + encodeURIComponent(gameID));
+			}
 		}
 	})
 	.controller('GameCtrl', function ($scope, $routeParams, socket) {
@@ -249,11 +253,28 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		$scope.hand = [];
 		$scope.selectedCards = [];
 
+		$scope.drawBlack = function(){
+			socket.emit('draw_black');
+		};
+
+		socket.on('draw_black', function(card) {
+			$scope.blackCard = card;
+		});
+
+		socket.on('game_state', function(state) {
+			console.log('STATE YO', state);
+			$scope.gameState = state;
+		});
+
 		// intermission -> {play -> wait -> reveal, czar -> pick}
 		$scope.gameState = 'intermission';
 
 		socket.emit('join_game', $routeParams.gameID, function(){
 			fillHand();
+		});
+
+		socket.on('card_czar', function(){
+			$scope.gameState = 'czar';
 		});
 
 

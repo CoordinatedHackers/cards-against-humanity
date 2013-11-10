@@ -29,7 +29,7 @@ Game.prototype.join = function(socket) {
 	this.players.push(player);
 
 	socket
-		.join(this.game_id)
+		.join(this.id)
 		.on('disconnect', function() {
 			var index = this.players.indexOf(player);
 			this.players.splice(index, 1);
@@ -42,9 +42,10 @@ Game.prototype.join = function(socket) {
 			if (this.current_card) {
 				this.black_deck.discard(this.current_card);
 			}
-			socket.emit("draw_black", new_card);
+			console.log("WUUUUUUT", this.id, new_card);
+			this.broadcast("draw_black", new_card);
 			this.current_card = new_card;
-			this.state = "play";
+			this.setState("play");
 		}.bind(this))
 		.on('draw_white', function(how_many, cb) {
 			var cards = [];
@@ -57,7 +58,7 @@ Game.prototype.join = function(socket) {
 		.on('submit_cards', function(cards) {
 			this.played_cards.push(cards);
 			if (this.played_cards.length === this.players.length) {
-				this.state = "reveal";
+				this.setState("reveal");
 				socket.broadcast.to(this.id).emit("submitted_cards", this.played_cards);
 			} else {
 				socket.broadcast.to(this.id).emit("played_cards", this.played_cards.length);
@@ -65,7 +66,7 @@ Game.prototype.join = function(socket) {
 		}.bind(this))
 		.on("pick_winner", function(card) {
 			if (this.cardCzar === player) {
-				this.state = "intermission";
+				this.setState("intermission");
 				//Need the winning card's player
 				socket.broadcast.to(this.id).emit("submitted_cards", this.played_cards);
 			} else {
@@ -83,6 +84,16 @@ Game.prototype.join = function(socket) {
 Game.prototype.setCardCzar = function(cardCzar) {
 	this.cardCzar = cardCzar;
 	cardCzar.socket.emit('card_czar');
+};
+
+Game.prototype.setState = function(state) {
+	this.state = state;
+	console.log('state change gogogo', state);
+	this.broadcast('game_state', state);
+};
+
+Game.prototype.broadcast = function(name, data) {
+	io.sockets.in(this.id).emit(name, data);
 }
 
 
