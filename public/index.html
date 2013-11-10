@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+	#debugginator {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		opacity: 0.5;
+	}
+	#debugginator button {
+		margin: 0;
+		line-height: 1em;
+	}
+	body {
+		margin: 0;
+		padding-top: 65px;
+		font: 16px "Helvetica Neue", "Helvetica", Arial, sans-serif;
+	}
+	#lobby {
+		margin: 0.5em;
+		background: #eef;
+		padding: 0.25em;
+	}
+	#game {
+		transition: margin-top 300ms;
+	}
+	#game.inRound {
+		margin-top: 80px;
+	}
+	button {
+		display: block;
+		width: 100%;
+		margin: 1em 0;
+		font: inherit;
+		line-height: 2em;
+		border: 2px solid black;
+		background: none;
+		border-radius: 10px;
+		background: white;
+		outline: none;
+	}
+	button:not(:disabled) {
+		cursor: pointer;
+	}
+	button:not(:disabled):active {
+		background: #ccc;
+	}
+
+	#black button {
+		border-color: white;
+		color: white;
+		background-color: black;
+		margin-bottom: 0;
+	}
+
+	#black button:not(:disabled):active {
+		background-color: #444;
+	}
+
+	#hand {
+		margin: 0.5em;
+	}
+	#czar {
+		position: fixed;
+		top: 50px;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		background: rgba(255, 255, 255, 0.8);
+	}
+	#czar_choose {
+		background: white;
+		border-bottom: 2px solid black;
+		text-align: center;
+		padding: 0.5em;
+		box-shadow: 0 0 1em rgba(0, 0, 0, 1);
+	}
+	#scoresWrapper {
+		width: 100%;
+		position: fixed;
+		top: 0;
+	}
+	#scoresWrapper.scroll {
+		overflow: auto;
+	}
+	#scores {
+		border-collapse: collapse;
+		table-layout: fixed;
+		width: 100%;
+		height: 50px;
+		background: white;
+	}
+	#scoresWrapper.scroll #scores {
+		width: auto;
+	}
+	#scores td {
+		border: 2px solid black;
+		padding: 0.5em;
+		text-align: center;
+	}
+	#scores .score {
+		font-size: 1.3em;
+		font-weight: bold;
+	}
+	#scores .name {
+		font-size: 0.8em;
+		opacity: 0.8;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		white-space: nowrap;
+	}
+
+	#hand {
+		list-style: none;
+		padding: 0;
+	}
+
+	.card {
+		position: relative;
+		display: block;
+		font-size: 20px;
+		font-weight: bold;
+		margin: 0 1.25em;
+		padding: 1.25em;
+		transition: -webkit-transform ease-in-out 80ms;
+	}
+	.card::before {
+		z-index: -1;
+		content: '';
+		display: block;
+		box-shadow: 0 0.2em 0.8em rgba(0, 0, 0, 0.7);
+		border-radius: 0.7em;
+		height: 18em;
+		top: 0;
+		left: 0;
+		width: 100%;
+		position: absolute;
+	}
+
+	#hand .card .index {
+		position: absolute;
+		width: 1.5em;
+		height: 1.5em;
+		line-height: 1.5em;
+		border-radius: 0 0.7em 0 0.7em;
+		text-align: center;
+		top: 0;
+		right: 0;
+		color: white;
+		background: #FFC100;
+	}
+
+	#hand.play > .card {
+		-webkit-user-select: none;
+		user-select: none;
+		cursor: pointer;
+	}
+
+	#hand > .card:nth-child(2n) { -webkit-transform: rotate(-1deg) translateX(-11px); }
+	#hand > .card:nth-child(2n+1) { -webkit-transform: rotate(2deg) translateX(11px); }
+
+	#hand > .card::before {
+		background: white;
+	}
+	#black {
+		bottom: 0;
+		position: fixed;
+		width: 100%;
+		padding: 0 0.5em;
+		box-sizing: border-box;
+	}
+	#black .card {
+		color: white;
+		/* -webkit-transform: rotate(-1deg) translateX(5px); */
+	}
+	#black > .card::before {
+		background: black;
+		box-shadow: 0 0.2em 0.5em rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+	}
+
+	#black.ng-enter, #black.ng-leave {
+		transition: -webkit-transform ease-in 300ms;
+	}
+	#black.ng-enter { -webkit-transform: translateY(110%); }
+	#black.ng-enter-active { -webkit-transform: translateY(0); }
+	#black.ng-leave { -webkit-transform: translateY(0); }
+	#black.ng-leave-active { -webkit-transform: translateY(110%); }
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular-route.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular-animate.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular-touch.js"></script>
+<script src="public/js/deck.js"></script>
+<script>
+
+angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
+	.config(function($routeProvider) {
+		$routeProvider
+			.when('/', {controller: 'LobbyCtrl', templateUrl: 'lobby.html' })
+			.when('/game', {controller: 'GameCtrl', templateUrl: 'game.html' });
+	})
+	.controller('LobbyCtrl', function ($scope, $location) {
+		$scope.newGame = function(){
+			$location.path('/game');
+		}
+	})
+	.controller('GameCtrl', function ($scope, $http, $timeout) {
+
+		function fillHand() {
+			while ($scope.hand.length < 10) {
+				$scope.hand.push($scope.whiteDeck.draw());
+			}
+		};
+
+		$scope.hand = [];
+		$scope.selectedCards = [];
+
+		// intermission -> {play -> wait -> reveal, czar -> pick}
+		$scope.gameState = 'intermission';
+
+		// Temporary
+		$http.get('/cards.json').success(function(d) {
+			$scope.whiteDeck = new Deck(d.white);
+			$scope.blackDeck = new Deck(d.black);
+
+			fillHand();
+		});
+
+
+		// $scope.$watch('players', function() {
+		// 		$timeout(function(){
+		// 			var $scores = angular.element(scoresWrapper)
+		// 			$scores.removeClass('scroll');
+		// 			if (Array.prototype.reduce.call(
+		// 				$scores[0].querySelectorAll('.name'),
+		// 				function (tooBig, el) {
+		// 					return tooBig || el.scrollWidth > el.offsetWidth
+		// 				}, false
+		// 			)) {
+		// 				$scores.addClass('scroll');
+		// 			}
+		// 		}, 0);
+		// });
+
+		$scope.players = [
+			{ name: 'Sidney', score: 0 },
+			{ name: 'Matt', score: 0 },
+			{ name: 'Sam', score: 0 }
+		];
+
+		window.gs = $scope;
+
+		$scope.isSelected = function(card) {
+			return $scope.selectedCards.indexOf(card) !== -1;
+		}
+
+		$scope.nBlanks = function() {
+			return Math.max($scope.blackCard.length - 1, 1);
+		}
+
+		$scope.pickCard = function(card) {
+			if ($scope.gameState !== 'play') return;
+			var index = $scope.selectedCards.indexOf(card);
+			if (index !== -1) {
+				$scope.selectedCards.splice(index, 1);
+				return;
+			}
+			if ($scope.selectedCards.length == $scope.nBlanks()) {
+				$scope.selectedCards.pop();
+			}
+			$scope.selectedCards.push(card);
+		}
+
+		$scope.playCards = function() {
+			$scope.gameState = 'wait';
+		}
+
+		$scope.dbgPlay = function () {
+			$scope.gameState = 'play';
+			$scope.blackCard = $scope.blackDeck.draw();
+		};
+	})
+;
+
+
+</script>
+<body ng-app="cards">
+<div ng-view></div>

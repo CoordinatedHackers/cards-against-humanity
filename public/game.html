@@ -1,0 +1,38 @@
+<div id="game">
+	<ul ng-class="{ play: gameState == 'play' }" id="hand">
+		<li
+			ng-repeat="card in hand" ng-click="pickCard(card)"
+			ng-class="{ selected: isSelected(card) }"
+			class="card"
+		>
+			{{card}}
+			<div ng-if="isSelected(card)" class="index">{{nBlanks() == 1 ? '' : selectedCards.indexOf(card) + 1}}</div>
+		</li>
+	</ul>
+	<div ng-show="gameState == 'wait'" id="czar">
+		<div ng-show="gameState == 'czar'" id="czar_choose">
+			<h2>Your turn:</h2>
+			<button>Draw a card.</button>
+			<button>Write your own card.</button>
+		</div>
+	</div>
+	<div ng-if="!!blackCard" id="black">
+		<div class="card">
+			{{blackCard.join('________')}}
+			<button ng-click="playCards()" ng-if="gameState == 'play' && selectedCards.length === nBlanks()" id="gogogo">
+				Play {{nBlanks() == 1 ? 'it' : '&lsquo;em'}}.
+			</button>
+		</div>
+	</div>
+	<div id="scoresWrapper">
+		<table id="scores"><tr>
+			<td ng-repeat="player in players">
+				<div class="score">{{player.score}}</div>
+				<div class="name">{{player.name}}</div>
+			</td>
+		</tr></table>
+	</div>
+	<div id="debugginator">
+		<button ng-click="dbgPlay()">Play</button>
+	</div>
+</div>
