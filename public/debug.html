@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<title>Cards Against Humanity</title>
+	</head>
+	<body>
+		<pre id="log"></pre>
+		<button id="new_game">New Game</button>
+		<button id="foo_game">Join Game</button>
+		<button id="draw_white_card">Draw White Cards</button>
+		<button id="draw_black_card">Draw Black Cards</button>
+		<button id="gamestate">Inspect Game State</button>
+		<script>
+			function Logger(id, socket){
+				this.element = document.getElementById(id);
+				this.log = function (type, message) {
+					var string = "\n" + type.toUpperCase() + " " + JSON.stringify(message);
+					this.element.textContent += string;
+					console.log(type, message);
+				};
+				//add filter cb
+				this.register = function(event) {
+					if (Array.isArray(event)) {
+						for (var i in event) {
+							this.register(event[i]);
+						}
+					}
+					socket.on(event, function(data) {
+						this.log(event, data);
+					}.bind(this));
+				};
+				return this;
+			}
+		</script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			var socket = io.connect('http://localhost');
+			var new_game = document.getElementById("new_game"),
+				foo_game = document.getElementById("foo_game"),
+				draw_white_card = document.getElementById("draw_white_card"),
+				draw_black_card = document.getElementById("draw_black_card"),
+				game_state = document.getElementById("gamestate");
+
+			logger = new Logger("log", socket);
+			logger.register(["rooms", "created_game", "joined", "left", "new_round", "gamestate", "error", "draw_black"]);
+
+			foo_game.addEventListener("click", function() {
+				socket.emit("join", prompt("Join Game Number:"));
+			});
+			new_game.addEventListener("click", function() {
+				socket.emit("create_game");//, {room_id: "foo"+ Math.floor(Math.random()*100000)});
+			});
+			draw_white_card.addEventListener("click", function() {
+				socket.emit("draw_white", prompt("How Many Cards?"), logger.log.bind(logger, "draw_white"));
+			});
+			draw_black_card.addEventListener("click", function() {
+				socket.emit("draw_black");
+			});
+			game_state.addEventListener("click", function() {
+				socket.emit("gamestate", prompt("What Game?"));
+			});
+
+			socket.on("rooms", function(data) {
+			}).on('created_game', function(game_id) {
+				socket.emit("join", game_id);
+			}).on('joined', function (data) {
+			}).on('left', function (data) {
+			}).on('new_round', function(data) {
+			});
+		</script>
+	</body>
+</html>
