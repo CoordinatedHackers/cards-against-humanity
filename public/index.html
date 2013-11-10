@@ -190,30 +190,60 @@
 	#black.ng-leave { -webkit-transform: translateY(0); }
 	#black.ng-leave-active { -webkit-transform: translateY(110%); }
 </style>
+	<script src="/socket.io/socket.io.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular-route.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular-animate.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular-touch.js"></script>
-<script src="public/js/deck.js"></script>
 <script>
 
 angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
+	// From http://www.html5rocks.com/en/tutorials/frameworks/angular-websockets/
+	.factory('socket', function ($rootScope) {
+		var socket = io.connect();
+		console.log('connect', socket);
+		return {
+			on: function (eventName, callback) {
+				socket.on(eventName, function () {	
+					var args = arguments;
+					$rootScope.$apply(function () {
+						callback.apply(socket, args);
+					});
+				});
+			},
+			emit: function (eventName, data, callback) {
+				socket.emit(eventName, data, function () {
+					var args = arguments;
+					$rootScope.$apply(function () {
+						if (callback) {
+							callback.apply(socket, args);
+						}
+					});
+				})
+			}
+		};
+	})
 	.config(function($routeProvider) {
 		$routeProvider
 			.when('/', {controller: 'LobbyCtrl', templateUrl: 'lobby.html' })
-			.when('/game', {controller: 'GameCtrl', templateUrl: 'game.html' });
+			.when('/game/:gameID', { controller: 'GameCtrl', templateUrl: 'game.html' });
 	})
-	.controller('LobbyCtrl', function ($scope, $location) {
+	.controller('LobbyCtrl', function ($scope, $location, socket) {
 		$scope.newGame = function(){
-			$location.path('/game');
+			socket.emit('create_game', null, function(gameID) {
+				console.log(arguments);
+				$location.path('/game/' + encodeURIComponent(gameID));
+			});
 		}
 	})
-	.controller('GameCtrl', function ($scope, $http, $timeout) {
+	.controller('GameCtrl', function ($scope, $routeParams, socket) {
 
 		function fillHand() {
-			while ($scope.hand.length < 10) {
-				$scope.hand.push($scope.whiteDeck.draw());
-			}
+			var want = 10 - $scope.hand.length;
+			if (want <= 0) return;
+			socket.emit('draw_white', want, function(cards) {
+				Array.prototype.push.apply($scope.hand, cards);
+			});
 		};
 
 		$scope.hand = [];
@@ -222,13 +252,10 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		// intermission -> {play -> wait -> reveal, czar -> pick}
 		$scope.gameState = 'intermission';
 
-		// Temporary
-		$http.get('/cards.json').success(function(d) {
-			$scope.whiteDeck = new Deck(d.white);
-			$scope.blackDeck = new Deck(d.black);
-
+		socket.emit('join_game', $routeParams.gameID, function(){
 			fillHand();
 		});
+
 
 
 		// $scope.$watch('players', function() {

@@ -10,7 +10,7 @@
 		<button id="foo_game">Join Game</button>
 		<button id="draw_white_card">Draw White Cards</button>
 		<button id="draw_black_card">Draw Black Cards</button>
-		<button id="gamestate">Inspect Game State</button>
+		<button id="game_state">Inspect Game State</button>
 		<script>
 			function Logger(id, socket){
 				this.element = document.getElementById(id);
@@ -25,6 +25,7 @@
 						for (var i in event) {
 							this.register(event[i]);
 						}
+						return;
 					}
 					socket.on(event, function(data) {
 						this.log(event, data);
@@ -36,20 +37,20 @@
 		<script src="/socket.io/socket.io.js"></script>
 		<script>
 			var socket = io.connect('http://localhost');
-			var new_game = document.getElementById("new_game"),
-				foo_game = document.getElementById("foo_game"),
-				draw_white_card = document.getElementById("draw_white_card"),
-				draw_black_card = document.getElementById("draw_black_card"),
-				game_state = document.getElementById("gamestate");
+
+			function logRooms() {
+				socket.emit("dbg_rooms", null, logger.log.bind(logger, "rooms"));
+			}
 
 			logger = new Logger("log", socket);
-			logger.register(["rooms", "created_game", "joined", "left", "new_round", "gamestate", "error", "draw_black"]);
+			logger.register(["created_game", "joined", "left", "new_round", "gamestate", "error", "draw_black"]);
 
 			foo_game.addEventListener("click", function() {
-				socket.emit("join", prompt("Join Game Number:"));
+				socket.emit("join_game", prompt("Join Game Number:"), logger.log.bind(logger, "join_game"));
 			});
 			new_game.addEventListener("click", function() {
-				socket.emit("create_game");//, {room_id: "foo"+ Math.floor(Math.random()*100000)});
+				socket.emit("create_game", function(game_id){
+				});
 			});
 			draw_white_card.addEventListener("click", function() {
 				socket.emit("draw_white", prompt("How Many Cards?"), logger.log.bind(logger, "draw_white"));
@@ -61,8 +62,7 @@
 				socket.emit("gamestate", prompt("What Game?"));
 			});
 
-			socket.on("rooms", function(data) {
-			}).on('created_game', function(game_id) {
+			socket.on('created_game', function(game_id) {
 				socket.emit("join", game_id);
 			}).on('joined', function (data) {
 			}).on('left', function (data) {

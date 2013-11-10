@@ -12,155 +12,108 @@ const isProduction = (process.env.NODE_ENV === 'production'),
 
 var games = {};
 
+function Game() {
+
+	this.id = Math.floor(Math.random() * 100000);
+	this.players = [];
+	this.white_deck = new Deck(cards.white);
+	this.black_deck = new Deck(cards.black);
+	this.state = "intermission";
+
+	games[this.id] = this;
+}
+
+Game.prototype.join = function(socket) {
+
+	var player = { socket: socket, score: 0 };
+	this.players.push(player);
+
+	socket
+		.join(this.game_id)
+		.on('disconnect', function() {
+			var index = this.players.indexOf(player);
+			this.players.splice(index, 1);
+			if (this.players.length) {
+				this.setCardCzar(this.players[index % this.players.length]);
+			}
+		}.bind(this))
+		.on('draw_black', function() {
+			var new_card = this.black_deck.draw();
+			if (this.current_card) {
+				this.black_deck.discard(this.current_card);
+			}
+			socket.emit("draw_black", new_card);
+			this.current_card = new_card;
+			this.state = "play";
+		}.bind(this))
+		.on('draw_white', function(how_many, cb) {
+			var cards = [];
+
+			while (how_many--) {
+				cards.push(this.white_deck.draw());
+			}
+			cb && cb(cards);
+		}.bind(this))
+		.on('submit_cards', function(cards) {
+			this.played_cards.push(cards);
+			if (this.played_cards.length === this.players.length) {
+				this.state = "reveal";
+				socket.broadcast.to(this.id).emit("submitted_cards", this.played_cards);
+			} else {
+				socket.broadcast.to(this.id).emit("played_cards", this.played_cards.length);
+			}
+		}.bind(this))
+		.on("pick_winner", function(card) {
+			if (this.cardCzar === player) {
+				this.state = "intermission";
+				//Need the winning card's player
+				socket.broadcast.to(this.id).emit("submitted_cards", this.played_cards);
+			} else {
+				socket.broadcast.to(this.id).emit("played_cards", this.played_cards.length);
+			}
+		}.bind(this))
+		.broadcast.to(this.id).emit("joined", {id: socket.id})
+	;
+
+	if (this.players.length === 1) {
+		this.setCardCzar(player);
+	}
+};
+
+Game.prototype.setCardCzar = function(cardCzar) {
+	this.cardCzar = cardCzar;
+	cardCzar.socket.emit('card_czar');
+}
+
+
 app.use(express.static(__dirname + '/public'));
 
 //Intermission
 //Play
 //Reveal
 io.sockets.on("connection", function(socket) {
-	try {
-	socket.emit("rooms", Object.keys(io.sockets.manager.rooms))
-	socket.on("create_game", function() {
-		var game_id = Math.floor(Math.random() * 100000);
-		games[game_id] = {
-			players: [],
-			white_deck: new Deck(cards.white),
-			black_deck: new Deck(cards.black),
-			state: "intermission"
-		};
-		socket.emit("created_game", game_id);
-	}).on("join", function(game_id) {
-		socket.join(game_id);
-		socket.set("game_id", game_id);
-		socket.broadcast.to(game_id).emit("joined", {id: socket.id, room: game_id});
 
-		//For Testing
-		io.sockets.emit("rooms", Object.keys(io.sockets.manager.rooms));
-
-		var player = {player_id: socket.id, score: 0};
+	socket.on("create_game", function(_, cb) {
+		var game = new Game;
+		cb && cb(game.id);
+	}).on("join_game", function(game_id, cb) {
+		var game = games[game_id]
+		if (game) {
+			game.join(socket);
+			cb && cb(true);
+		} else {
+			cb && cb(false);
+		}
+	}).on("gamestate", function(game_id) {
 		var game = games[game_id];
 		if (game) {
-			if (game.players.length === 0) {
-				game.card_czar = player;
-				socket.emit("card_czar");
-			}
-			games[game_id].players.push(player);
-			console.log(games);
+			console.log(game);
 		}
-	}).on("disconnect", function() {
-		socket.get("game_id", function(err, game_id) {
-			if (err) throw new Error(err);
-			var game = games[game_id];
-			if (game) {
-				game.players.some(function(player, index){
-					if (player.player_id === socket.id) {
-						if (game.card_czar === player) {
-							//FIXME
-							game.card_czar = game.players[index + 1];
-						}
-						game.players.splice(index, 1);
-						return true;
-					}
-				});
-				console.log("Gamestate fired");
-				socket.broadcast.emit("gamestate", game);
-				console.log(game);
-			}
-		});
-	}).on("draw_black", function() {
-		socket.get("game_id", function(err, game_id) {
-			if (err) throw new Error(err);
 
-			var game = games[game_id],
-				current_card;
-
-			if (game) {
-				current_card = game.black_deck.draw();
-				if (game.current_card !== null) {
-					game.black_deck.discard(game.current_card);
-				}
-				socket.emit("draw_black", current_card);
-				game.current_card = current_card;
-				game.state = "play";
-			} else {
-				socket.emit("error", "No Game");
-			}
-		});
-	}).on("draw_white", function(how_many, cb) {
-		socket.get("game_id", function(err, game_id) {
-			if (err) throw new Error(err);
-
-			var game = games[game_id],
-				cards = [];
-
-			if (game) {
-				while (how_many--) {
-					cards.push(game.white_deck.draw());
-				}
-				cb(cards);
-			} else {
-				socket.emit("error", "No Game");
-			}
-		});
-	}).on("submit_cards", function(cards) {
-		socket.get("game_id", function(err, game_id) {
-			if (err) throw new Error(err);
-
-			var game = games[game_id];
-
-			if (game) {
-				game.played_cards.push(cards);
-				if (game.played_cards.length === game.players.length) {
-					game.state = "reveal";
-					socket.broadcast.to(game_id).emit("submitted_cards", game.played_cards);
-				} else {
-					socket.broadcast.to(game_id).emit("played_cards", game.played_cards.length);
-				}
-			} else {
-				socket.emit("error", "No Game");
-			}
-		});
-	}).on("pick_winner", function(card) {
-		socket.get("game_id", function(err, game_id) {
-			if (err) throw new Error(err);
-
-			var game = games[game_id];
-
-			if (game) {
-				if (game.card_czar.player_id === socket.id) {
-					game.state = "intermission";
-					//Need the winning card's player
-					socket.broadcast.to(game_id).emit("submitted_cards", game.played_cards);
-				} else {
-					socket.broadcast.to(game_id).emit("played_cards", game.played_cards.length);
-				}
-			} else {
-				socket.emit("error", "No Game");
-			}
-		});
-	}).on("gamestate", function(game_id) {
-		if (game_id === undefined || game_id === "") {
-			socket.get("game_id", function(err, game_id) {
-				if (err) throw new Error(err);
-				var game = games[game_id];
-				if (game) {
-					socket.emit("gamestate", game);
-				} else {
-					socket.emit("error", "No game");
-				}
-			});
-		} else {
-			if (games[game_id]) {
-				socket.emit("gamestate", games[game_id]);
-			} else {
-				socket.emit("error", "no such game");
-			}
-		}
+	// Debuggin’
+	}).on("dbg_rooms", function(_, cb){
+		cb && cb(Object.keys(games));
 	});
-	} catch (e) {
-		socket.emit("error", e);
-		throw e;
-	}
 });
 
 server.listen(port, function(err) {
