@@ -1,17 +1,16 @@
 {
-  "name": "nko4-coordinated-hackers",
+  "name": "CoordinatedCards",
   "version": "0.0.0",
-  "description": "Coordinated Hackers",
+  "description": "Cards Against Humanity for the web",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:nko4/coordinated-hackers.git"
+    "url": "git@github.com:CoordinatedHackers/CoordinatedCards.git"
   },
   "dependencies": {
-    "nko": "*",
 	"socket.io": "0.9.16",
 	"express": "3.4.4"
   },
