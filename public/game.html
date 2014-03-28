@@ -9,7 +9,7 @@
 			<div ng-if="isSelected(card)" class="index">{{nBlanks() == 1 ? '' : selectedCards.indexOf(card) + 1}}</div>
 		</li>
 	</ul>
-	<div ng-show="gameState == 'wait' || gameState == 'czar'" id="czar">
+	<div ng-show="gameState == 'czar' || gameState == 'wait'" id="czar">
 		<div ng-show="gameState == 'czar'" id="czar_choose">
 			<h2>Your turn:</h2>
 			<button ng-click="drawBlack()">Draw a card.</button>

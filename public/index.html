@@ -240,7 +240,13 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			}
 		}
 	})
-	.controller('GameCtrl', function ($scope, $routeParams, socket) {
+	.controller('GameCtrl', function ($scope, $routeParams, $location, socket) {
+
+		$scope.name = sessionStorage.name;
+
+		while (!$scope.name) {
+			sessionStorage.name = $scope.name = prompt('What\u2019s your name?');
+		}
 
 		function fillHand() {
 			var want = 10 - $scope.hand.length;
@@ -262,19 +268,39 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		});
 
 		socket.on('game_state', function(state) {
-			console.log('STATE YO', state);
+			if ($scope.amCzar) switch (state) {
+				case 'intermission': state = 'czar'; break;
+				case 'play': state = 'wait'; break;
+				case 'reveal': state = 'pick'; break;
+			}
 			$scope.gameState = state;
 		});
 
-		// intermission -> {play -> wait -> reveal, czar -> pick}
+		socket.on('submitted_cards', console.log.bind(console));
+		socket.on('played_cards', console.log.bind(console));
+
+		// intermission ->{ play ->} wait -> reveal
 		$scope.gameState = 'intermission';
 
-		socket.emit('join_game', $routeParams.gameID, function(){
+		socket.emit('join_game', {
+			game: $routeParams.gameID, name: $scope.name
+		}, function(state){
+			if (!state) {
+				alert('Dang, that game doesn\u2019t exist.');
+				$location.path('/');
+				return;
+			}
+			console.log('joined:', state);
+			$scope.hand = state.hand;
+			$scope.playerID = state.id;
 			fillHand();
 		});
 
 		socket.on('card_czar', function(){
-			$scope.gameState = 'czar';
+			$scope.amCzar = true;
+			if ($scope.gameState == 'intermission') {
+				$scope.gameState = 'czar';
+			}
 		});
 
 
@@ -325,6 +351,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 		$scope.playCards = function() {
 			$scope.gameState = 'wait';
+			socket.emit('submit_cards', $scope.selectedCards);
 		}
 
 		$scope.dbgPlay = function () {
