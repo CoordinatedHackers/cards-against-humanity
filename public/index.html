@@ -248,14 +248,6 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			sessionStorage.name = $scope.name = prompt('What\u2019s your name?');
 		}
 
-		function fillHand() {
-			var want = 10 - $scope.hand.length;
-			if (want <= 0) return;
-			socket.emit('draw_white', want, function(cards) {
-				Array.prototype.push.apply($scope.hand, cards);
-			});
-		};
-
 		$scope.hand = [];
 		$scope.selectedCards = [];
 
@@ -263,16 +255,12 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			socket.emit('draw_black');
 		};
 
-		socket.on('draw_black', function(card) {
+		socket.on('black_card', function(card) {
 			$scope.blackCard = card;
 		});
 
-		socket.on('game_state', function(state) {
-			if ($scope.amCzar) switch (state) {
-				case 'intermission': state = 'czar'; break;
-				case 'play': state = 'wait'; break;
-				case 'reveal': state = 'pick'; break;
-			}
+		socket.on('state', function(state) {
+			console.log('we get state:', state);
 			$scope.gameState = state;
 		});
 
@@ -284,23 +272,25 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 		socket.emit('join_game', {
 			game: $routeParams.gameID, name: $scope.name
-		}, function(state){
-			if (!state) {
+		}, function(info){
+			if (!info) {
 				alert('Dang, that game doesn\u2019t exist.');
 				$location.path('/');
 				return;
 			}
-			console.log('joined:', state);
-			$scope.hand = state.hand;
-			$scope.playerID = state.id;
-			fillHand();
+			console.log('joined:', info);
+			$scope.hand = info.hand;
+			$scope.playerID = info.id;
+			$scope.gameState = info.state;
+			$scope.players = info.players;
 		});
 
-		socket.on('card_czar', function(){
+		socket.on('czar', function(){
 			$scope.amCzar = true;
-			if ($scope.gameState == 'intermission') {
-				$scope.gameState = 'czar';
-			}
+		});
+
+		socket.on('players', function(players) {
+			$scope.players = players;
 		});
 
 
@@ -320,11 +310,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		// 		}, 0);
 		// });
 
-		$scope.players = [
-			{ name: 'Sidney', score: 0 },
-			{ name: 'Matt', score: 0 },
-			{ name: 'Sam', score: 0 }
-		];
+		$scope.players = [];
 
 		window.gs = $scope;
 
@@ -350,13 +336,13 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		}
 
 		$scope.playCards = function() {
-			$scope.gameState = 'wait';
 			socket.emit('submit_cards', $scope.selectedCards);
 		}
 
-		$scope.dbgPlay = function () {
-			$scope.gameState = 'play';
-			$scope.blackCard = $scope.blackDeck.draw();
+	}).directive('cahCardStack', function() {
+		return {
+			restrict: 'E',
+			templateUrl: 'card_stack.html'
 		};
 	})
 ;

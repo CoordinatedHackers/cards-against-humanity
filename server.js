@@ -8,6 +8,14 @@ const isProduction = (process.env.NODE_ENV === 'production'),
 	  port = (isProduction ? 80 : 5000),
 	  cards = require("./cards.json");
 
+const HAND_SIZE = 10;
+
+var func = {
+	key: function(k) {
+		return function(o) { return o[k]; };
+	}
+};
+
 var games = {};
 
 function Game() {
@@ -25,10 +33,12 @@ function Game() {
 
 Game.prototype.join = function(socket, playerInfo, cb) {
 
+	console.log('fuckfuckfuck');
+
 	var player;
 	if ((player = this.playersById[playerInfo.id])) {
 		clearTimeout(player.disconnectTimeout);
-		delete player[disconnectTimeout];
+		delete player.disconnectTimeout;
 	} else {
 		player = {
 			socket: socket,
@@ -51,19 +61,24 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 				var index = this.players.indexOf(player);
 				this.players.splice(index, 1);
 				delete this.playersById[player.id];
-				if (this.players.length) {
+				this.sendPlayers();
+				if (this.players.length && this.cardCzar == player) {
 					this.setCardCzar(this.players[index % this.players.length]);
 				}
-			}.bind(this), 5000);
+			}.bind(this), 1000);
 		}.bind(this))
 		.on('draw_black', function() {
-			var new_card = this.black_deck.draw();
-			if (this.current_card) {
-				this.black_deck.discard(this.current_card);
+			if (this.cardCzar !== player) {
+				console.log('a non-czar tried to draw_black', player);
+				return;
 			}
-			this.broadcast("draw_black", new_card);
-			this.current_card = new_card;
-			this.state = "play";
+			if (this.current_card) {
+				console.log('tried to draw a black card but one is already in play');
+				return;
+			}
+			this.current_card = this.black_deck.draw();
+
+			this.broadcast('black_card', this.current_card);
 			this.setState('play');
 		}.bind(this))
 		.on('draw_white', function(how_many, cb) {
@@ -75,77 +90,80 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 			cb && cb(cards);
 		}.bind(this))
 		.on('submit_cards', function(cards) {
+
 			this.played_cards.push(cards);
 			if (this.played_cards.length === (this.players.length - 1)) {
 				this.setState("reveal");
-				socket.broadcast.to(this.id).emit("submitted_cards", this.played_cards);
+				this.broadcast("revealed_cards", this.played_cards);
 			} else {
-				socket.broadcast.to(this.id).emit("played_cards", this.played_cards.length);
+				this.broadcast("played_cards", this.played_cards.length);
 			}
 		}.bind(this))
-		.on("pick_winner", function(card) {
-			if (this.cardCzar === player) {
-				this.setState("intermission");
-				//Need the winning card's player
-				socket.broadcast.to(this.id).emit("submitted_cards", this.played_cards);
-			} else {
-				socket.broadcast.to(this.id).emit("played_cards", this.played_cards.length);
+		.on("submit_winner", function(card) {
+			if (this.cardCzar !== player) {
+				console.log("non-czar tried to submit_winner:", player);
+				return;
 			}
+			this.setState("intermission");
+			// TODO: Broadcast the winning card
+			// TODO: Scoring
 		}.bind(this))
 	;
+
+	var want = HAND_SIZE;
+	while (want--) { player.hand.push(this.white_deck.draw()); }
+
+	cb && cb({
+		hand: player.hand,
+		id: player.id,
+		players: this.players.map(function(p){ return p.info; }),
+		card: this.current_card,
+		state: this.state
+	});
 
 	if (this.players.length === 1) {
 		this.setCardCzar(player);
 	}
-	if (this.current_card) {
-		socket.emit('draw_black', this.current_card);
-	}
-	console.log('New client', player, '. State is', this.state);
-	socket.emit('game_state', this.state);
-	cb && cb({
-		hand: player.hand,
-		id: player.id,
-		players: this.players.map(function(p){ return p.info; })
-	});
 };
 
 Game.prototype.setCardCzar = function(cardCzar) {
 	this.cardCzar = cardCzar;
-	cardCzar.socket.emit('card_czar');
+	cardCzar.socket.emit('czar', true);
 };
 
 Game.prototype.setState = function(state) {
 	this.state = state;
-	this.broadcast('game_state', state);
+	this.broadcast('state', state);
 };
 
 Game.prototype.broadcast = function(name, data) {
 	io.sockets.in(this.id).emit(name, data);
-}
+};
+
+Game.prototype.sendPlayers = function() {
+	this.broadcast('players', this.players.map(func.key('info')));
+};
 
 
 app.use(express.static(__dirname + '/public'));
 
-//Intermission
-//Play
-//Reveal
+// intermission
+// play
+// reveal
+
 io.sockets.on("connection", function(socket) {
 
 	socket.on("create_game", function(_, cb) {
 		var game = new Game;
 		cb && cb(game.id);
 	}).on("join_game", function(info, cb) {
+		console.log(games);
 		var game = games[info.game]
-		if (game) {
-			game.join(socket, info, cb);
-		} else {
-			cb && cb(null);
-		}
+		if (game) { game.join(socket, info, cb); }
+		else { cb && cb(null); }
 	}).on("gamestate", function(game_id) {
 		var game = games[game_id];
-		if (game) {
-			console.log(game);
-		}
+		if (game) { console.log(game); }
 
 	// Debuggin’
 	}).on("dbg_rooms", function(_, cb){

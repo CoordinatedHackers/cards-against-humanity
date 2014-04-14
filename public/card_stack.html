@@ -1,0 +1,10 @@
+<ul ng-class="{ play: gameState == 'play' }" id="hand">
+	<li
+		ng-repeat="card in hand" ng-click="pickCard(card)"
+		ng-class="{ selected: isSelected(card) }"
+		class="card"
+	>
+		{{card}}
+		<div ng-if="isSelected(card)" class="index">{{nBlanks() == 1 ? '' : selectedCards.indexOf(card) + 1}}</div>
+	</li>
+</ul>

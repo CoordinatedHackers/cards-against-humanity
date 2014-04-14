@@ -1,16 +1,7 @@
 <div id="game">
-	<ul ng-class="{ play: gameState == 'play' }" id="hand">
-		<li
-			ng-repeat="card in hand" ng-click="pickCard(card)"
-			ng-class="{ selected: isSelected(card) }"
-			class="card"
-		>
-			{{card}}
-			<div ng-if="isSelected(card)" class="index">{{nBlanks() == 1 ? '' : selectedCards.indexOf(card) + 1}}</div>
-		</li>
-	</ul>
-	<div ng-show="gameState == 'czar' || gameState == 'wait'" id="czar">
-		<div ng-show="gameState == 'czar'" id="czar_choose">
+	<cah-card-stack></cah-card-stack>
+	<div ng-show="gameState == 'reveal' || amCzar" id="czar">
+		<div ng-show="amCzar && gameState == 'intermission'" id="czar_choose">
 			<h2>Your turn:</h2>
 			<button ng-click="drawBlack()">Draw a card.</button>
 			<button>Write your own card.</button>

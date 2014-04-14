@@ -5,19 +5,52 @@
 		<title>Cards Against Humanity</title>
 	</head>
 	<body>
-		<pre id="log"></pre>
 		<button id="new_game">New Game</button>
 		<button id="foo_game">Join Game</button>
 		<button id="draw_white_card">Draw White Cards</button>
 		<button id="draw_black_card">Draw Black Cards</button>
 		<button id="game_state">Inspect Game State</button>
+		<br>
+		<select multiple id="hand"></select>
+		<button id="submit_cards">Play dem cards</button>
+		<br>
+		<select multiple id="played"></select>
+		<button id="pick_winner">Winnar</button>
+		<pre id="log"></pre>
 		<script>
+			function CardSelector(el) {
+				this.el = el;
+			}
+			CardSelector.prototype = {
+				set cards(cards) {
+					this.el.innerHTML = '';
+					cards.forEach(function(card) {
+						var el = document.createElement('option');
+						el.textContent = JSON.stringify(card);
+						el.data = card;
+						this.el.appendChild(el);
+					}.bind(this));
+				},
+				get selected() {
+					return Array.prototype.map.call(this.el.selectedOptions, function(opt) {
+						return opt.data;
+					});
+				}
+
+			};
+
+			var hand = new CardSelector(document.getElementById('hand'));
+			var played = new CardSelector(document.getElementById('played'));
+
 			function Logger(id, socket){
 				this.element = document.getElementById(id);
-				this.log = function (type, message) {
-					var string = "\n" + type.toUpperCase() + " " + JSON.stringify(message);
-					this.element.textContent += string;
-					console.log(type, message);
+				this.log = function () {
+					this.element.textContent += ('\n' + Array.prototype.map.call(arguments,
+						function(x) {
+							if (typeof x === 'string') { return x; }
+							return JSON.stringify(x, null, '\t');
+						}
+					).join(' '));
 				};
 				//add filter cb
 				this.register = function(event) {
@@ -37,19 +70,33 @@
 		<script src="/socket.io/socket.io.js"></script>
 		<script>
 			var socket = io.connect('http://localhost');
+			var NAME = 'Debug ' + Math.floor(Math.random() * 1000);
 
 			function logRooms() {
 				socket.emit("dbg_rooms", null, logger.log.bind(logger, "rooms"));
 			}
 
+			function joined(info) {
+				logger.log('joined game', info);
+				hand.cards = info.hand;
+			}
+
 			logger = new Logger("log", socket);
-			logger.register(["created_game", "joined", "left", "new_round", "gamestate", "error", "draw_black"]);
+			logger.register(['state', 'czar', 'black_card', 'revealed_cards']);
 
 			foo_game.addEventListener("click", function() {
-				socket.emit("join_game", prompt("Join Game Number:"), logger.log.bind(logger, "join_game"));
+				socket.emit("join_game", {
+					game: +prompt("Join Game Number:")
+				}, joined);
 			});
 			new_game.addEventListener("click", function() {
-				socket.emit("create_game", function(game_id){
+				socket.emit("create_game", null, function(gameId){
+					logger.log('created game', gameId);
+					socket.emit('join_game', {
+						name: NAME,
+						game: gameId
+					}, joined);
+
 				});
 			});
 			draw_white_card.addEventListener("click", function() {
@@ -62,11 +109,17 @@
 				socket.emit("gamestate", prompt("What Game?"));
 			});
 
-			socket.on('created_game', function(game_id) {
-				socket.emit("join", game_id);
-			}).on('joined', function (data) {
-			}).on('left', function (data) {
-			}).on('new_round', function(data) {
+			submit_cards.addEventListener('click', function(){
+				socket.emit('submit_cards', hand.selected);
+			});
+
+			pick_winner.addEventListener('click', function(){
+				socket.emit("submit_winner", played.selected);
+				played.cards = [];
+			});
+
+			socket.on('revealed_cards', function(hands) {
+				played.cards = hands;
 			});
 		</script>
 	</body>
