@@ -1,5 +1,9 @@
 <div id="game" ng-class="gameState">
-	<cah-card-stack cards="hand"></cah-card-stack>
+
+	<cah-card-stack
+		cards="hand" selected="selectedCards" n-selectable="nBlanks()"
+	></cah-card-stack>
+
 	<div ng-if="gameState == 'reveal' || amCzar" id="czar">
 		<div ng-show="amCzar && gameState == 'intermission'" id="czar_choose">
 			<h2>Your turn:</h2>

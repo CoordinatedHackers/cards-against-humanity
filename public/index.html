@@ -328,20 +328,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		window.gs = $scope;
 
 		$scope.nBlanks = function() {
-			return Math.max($scope.blackCard.length - 1, 1);
-		}
-
-		$scope.pickCard = function(card) {
-			if ($scope.gameState !== 'play') return;
-			var index = $scope.selectedCards.indexOf(card);
-			if (index !== -1) {
-				$scope.selectedCards.splice(index, 1);
-				return;
-			}
-			if ($scope.selectedCards.length == $scope.nBlanks()) {
-				$scope.selectedCards.pop();
-			}
-			$scope.selectedCards.push(card);
+			return $scope.gameState == 'play' ? Math.max($scope.blackCard.length - 1, 1) : 0;
 		}
 
 		$scope.playCards = function() {
@@ -354,17 +341,34 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			replace: true,
 			templateUrl: 'card_stack.html',
 			scope: {
-				cards: '='
-				selectable: '='
+				cards: '=',
+				nSelectable: '=',
 				selected: '='
 			},
-			link: function(scope, element, attr) {
-				console.log('hit');
-			},
+			// link: function(scope, element, attr) {
+			// 	console.log('hit');
+			// },
 			controller: function($scope) {
+
+				$scope.selected = [];
+
 				$scope.isSelected = function(card) {
-					return $scope.selectedCards.indexOf(card) !== -1;
+					return $scope.selected.indexOf(card) !== -1;
 				}
+
+				$scope.select = function(card) {
+					if (!$scope.nSelectable) return;
+					var index = $scope.selected.indexOf(card);
+					if (index !== -1) {
+						$scope.selected.splice(index, 1);
+						return;
+					}
+					if ($scope.selected.length == $scope.nSelectable) {
+						$scope.selected.pop();
+					}
+					$scope.selected.push(card);
+				}
+
 			}
 		};
 	})

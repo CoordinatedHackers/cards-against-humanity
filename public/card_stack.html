@@ -5,6 +5,6 @@
 		class="card"
 	>
 		{{card}}
-		<div ng-if="isSelected(card)" class="index">{{nBlanks() == 1 ? '' : selectedCards.indexOf(card) + 1}}</div>
+		<div ng-if="isSelected(card)" class="index">{{nSelectable == 1 ? '' : selected.indexOf(card) + 1}}</div>
 	</li>
 </ul>
