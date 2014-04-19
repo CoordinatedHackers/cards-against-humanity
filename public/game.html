@@ -1,11 +1,12 @@
-<div id="game">
-	<cah-card-stack></cah-card-stack>
-	<div ng-show="gameState == 'reveal' || amCzar" id="czar">
+<div id="game" ng-class="gameState">
+	<cah-card-stack cards="hand"></cah-card-stack>
+	<div ng-if="gameState == 'reveal' || amCzar" id="czar">
 		<div ng-show="amCzar && gameState == 'intermission'" id="czar_choose">
 			<h2>Your turn:</h2>
 			<button ng-click="drawBlack()">Draw a card.</button>
 			<button>Write your own card.</button>
 		</div>
+		<cah-card-stack cards="revealCards" ng-if="gameState == 'reveal'"></cah-card-stack>
 	</div>
 	<div ng-if="!!blackCard" id="black">
 		<div class="card">

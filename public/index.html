@@ -154,7 +154,7 @@
 		background: #FFC100;
 	}
 
-	#hand.play > .card {
+	#game.play > #hand > .card {
 		-webkit-user-select: none;
 		user-select: none;
 		cursor: pointer;
@@ -228,8 +228,14 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 	})
 	.config(function($routeProvider) {
 		$routeProvider
-			.when('/', {controller: 'LobbyCtrl', templateUrl: 'lobby.html' })
-			.when('/game/:gameID', { controller: 'GameCtrl', templateUrl: 'game.html' });
+			.when('/', {
+				controller: 'LobbyCtrl',
+				templateUrl: 'lobby.html'
+			})
+			.when('/game/:gameID', {
+				controller: 'GameCtrl',
+				templateUrl: 'game.html'
+			});
 	})
 	.controller('LobbyCtrl', function ($scope, $location, socket) {
 		$scope.newGame = function(){
@@ -287,6 +293,9 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			$scope.playerID = info.id;
 			$scope.gameState = info.state;
 			$scope.players = info.players;
+			$scope.amCzar = info.czar;
+			$scope.revealCards = info.revealCards;
+			$scope.blackCard = info.blackCard;
 		});
 
 		socket.on('czar', function(){
@@ -318,10 +327,6 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 		window.gs = $scope;
 
-		$scope.isSelected = function(card) {
-			return $scope.selectedCards.indexOf(card) !== -1;
-		}
-
 		$scope.nBlanks = function() {
 			return Math.max($scope.blackCard.length - 1, 1);
 		}
@@ -346,7 +351,21 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 	}).directive('cahCardStack', function() {
 		return {
 			restrict: 'E',
-			templateUrl: 'card_stack.html'
+			replace: true,
+			templateUrl: 'card_stack.html',
+			scope: {
+				cards: '='
+				selectable: '='
+				selected: '='
+			},
+			link: function(scope, element, attr) {
+				console.log('hit');
+			},
+			controller: function($scope) {
+				$scope.isSelected = function(card) {
+					return $scope.selectedCards.indexOf(card) !== -1;
+				}
+			}
 		};
 	})
 ;

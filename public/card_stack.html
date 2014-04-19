@@ -1,6 +1,6 @@
-<ul ng-class="{ play: gameState == 'play' }" id="hand">
+<ul id="hand">
 	<li
-		ng-repeat="card in hand" ng-click="pickCard(card)"
+		ng-repeat="card in cards" ng-click="select(card)"
 		ng-class="{ selected: isSelected(card) }"
 		class="card"
 	>

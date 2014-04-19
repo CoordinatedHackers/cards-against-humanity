@@ -33,8 +33,6 @@ function Game() {
 
 Game.prototype.join = function(socket, playerInfo, cb) {
 
-	console.log('fuckfuckfuck');
-
 	var player;
 	if ((player = this.playersById[playerInfo.id])) {
 		clearTimeout(player.disconnectTimeout);
@@ -118,7 +116,10 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 		id: player.id,
 		players: this.players.map(function(p){ return p.info; }),
 		card: this.current_card,
-		state: this.state
+		state: this.state,
+		czar: this.cardCzar == player,
+		blackCard: this.current_card,
+		playedCards: this.state == 'reveal' ? this.played_cards : null
 	});
 
 	if (this.players.length === 1) {
