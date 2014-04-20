@@ -23,10 +23,15 @@ function Game() {
 	this.id = Math.floor(Math.random() * 100000);
 	this.players = [];
 	this.playersById = {};
-	this.white_deck = new Deck(cards.white);
-	this.black_deck = new Deck(cards.black);
-	this.played_cards = [];
-	this.state = "intermission";
+	this.whiteDeck = new Deck(cards.white);
+	this.blackDeck = new Deck(cards.black);
+
+	this.info = {
+		playedCards: [],
+		state: "intermission",
+		czar: null,
+		blackCard: null
+	}
 
 	games[this.id] = this;
 }
@@ -43,9 +48,10 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 			info: { // Public
 				id: Math.random().toString(36).substring(2),
 				name: playerInfo.name,
-				score: 0
+				score: 0,
+				hand: [],
+				playedCards: []
 			},
-			hand: []
 		};
 		this.players.push(player);
 		this.playersById[player.info.id] = player;
@@ -70,32 +76,32 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 				console.log('a non-czar tried to draw_black', player);
 				return;
 			}
-			if (this.current_card) {
+			if (this.currentCard) {
 				console.log('tried to draw a black card but one is already in play');
 				return;
 			}
-			this.current_card = this.black_deck.draw();
+			this.currentCard = this.blackDeck.draw();
 
-			this.broadcast('black_card', this.current_card);
+			this.broadcast('black_card', this.currentCard);
 			this.setState('play');
 		}.bind(this))
-		.on('draw_white', function(how_many, cb) {
+		.on('draw_white', function(howMany, cb) {
 			var cards = [];
 
-			while (how_many--) {
-				cards.push(this.white_deck.draw());
+			while (howMany--) {
+				cards.push(this.whiteDeck.draw());
 			}
 			cb && cb(cards);
 		}.bind(this))
 		.on('submit_cards', function(cards) {
 
-			this.played_cards.push(cards);
-			if (this.played_cards.length === (this.players.length - 1)) {
+			this.playedCards.push(cards);
+			if (this.playedCards.length === (this.players.length - 1)) {
 				//this.setState("reveal");
-				this.state = 'reveal'
-				this.broadcast("revealed_cards", this.played_cards);
+				this.info.state = 'reveal'
+				this.broadcast("revealed_cards", this.playedCards);
 			} else {
-				this.broadcast("played_cards", this.played_cards.length);
+				this.broadcast("played_cards", this.playedCards.length);
 			}
 		}.bind(this))
 		.on("submit_winner", function(card) {
@@ -112,17 +118,19 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 	;
 
 	var want = HAND_SIZE;
-	while (want--) { player.hand.push(this.white_deck.draw()); }
+	while (want--) { player.info.hand.push(this.whiteDeck.draw()); }
 
 	cb && cb({
-		hand: player.hand,
-		id: player.id,
+		game: this.info,
+
 		players: this.players.map(function(p){ return p.info; }),
-		card: this.current_card,
-		state: this.state,
+		you: this.players.indexOf(player),
+
+		card: this.currentCard,
+		state: this.info.state,
 		czar: this.cardCzar == player,
-		blackCard: this.current_card,
-		playedCards: this.state == 'reveal' ? this.played_cards : null
+		blackCard: this.currentCard,
+		playedCards: this.state == 'reveal' ? this.playedCards : null
 	});
 
 	if (this.players.length === 1) {
@@ -136,7 +144,7 @@ Game.prototype.setCardCzar = function(cardCzar) {
 };
 
 Game.prototype.setState = function(state) {
-	this.state = state;
+	this.info.state = state;
 	this.broadcast('state', state);
 };
 
@@ -165,8 +173,8 @@ io.sockets.on("connection", function(socket) {
 		var game = games[info.game]
 		if (game) { game.join(socket, info, cb); }
 		else { cb && cb(null); }
-	}).on("gamestate", function(game_id) {
-		var game = games[game_id];
+	}).on("gamestate", function(gameID) {
+		var game = games[gameID];
 		if (game) { console.log(game); }
 
 	// Debuggin’
@@ -211,7 +219,7 @@ Deck.prototype.shuffle = function() {
 	this.discards = [];
 };
 
-Deck.prototype.draw = function(how_many) {
+Deck.prototype.draw = function() {
 	if (!this.deck.length) { this.shuffle(); }
 	return this.deck.pop();
 }
