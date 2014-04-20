@@ -10,10 +10,16 @@
 			<button ng-click="drawBlack()">Draw a card.</button>
 			<button>Write your own card.</button>
 		</div>
-		<cah-card-stack cards="revealCards" ng-if="gameState == 'reveal'"></cah-card-stack>
+		<cah-black-card-stack
+			cards="revealCards"
+			czar="amCzar"
+			template="blackCard"
+			pick="winner"
+			ng-if="gameState == 'reveal'"
+		></cah-black-card-stack>
 	</div>
-	<div ng-if="!!blackCard" id="black">
-		<div class="card">
+	<div ng-if="blackCard && gameState == 'play'" id="black">
+		<div class="card black">
 			{{blackCard.join('________')}}
 			<button ng-click="playCards()" ng-if="gameState == 'play' && selectedCards.length === nBlanks()" id="gogogo">
 				Play {{nBlanks() == 1 ? 'it' : '&lsquo;em'}}.

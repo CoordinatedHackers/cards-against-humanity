@@ -1,0 +1,9 @@
+<ul id="reveal">
+	<li
+		ng-repeat="card in formattedCards"
+		class="card black"
+	>
+		<span ng-repeat="chunk in card" ng-class="chunk.type">{{chunk.text}}</span>
+		<button ng-if="czar" ng-click="pick(card)">I choose you!</button>
+	</li>
+</ul>

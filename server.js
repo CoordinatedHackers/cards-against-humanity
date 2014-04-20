@@ -91,7 +91,8 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 
 			this.played_cards.push(cards);
 			if (this.played_cards.length === (this.players.length - 1)) {
-				this.setState("reveal");
+				//this.setState("reveal");
+				this.state = 'reveal'
 				this.broadcast("revealed_cards", this.played_cards);
 			} else {
 				this.broadcast("played_cards", this.played_cards.length);
@@ -102,7 +103,9 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 				console.log("non-czar tried to submit_winner:", player);
 				return;
 			}
+			console.log("Winning Card: ", card);
 			this.setState("intermission");
+			this.broadcast("winning_card", card);
 			// TODO: Broadcast the winning card
 			// TODO: Scoring
 		}.bind(this))

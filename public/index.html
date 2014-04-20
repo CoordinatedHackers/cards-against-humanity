@@ -50,14 +50,14 @@
 		background: #ccc;
 	}
 
-	#black button {
+	.black button {
 		border-color: white;
 		color: white;
 		background-color: black;
 		margin-bottom: 0;
 	}
 
-	#black button:not(:disabled):active {
+	.black button:not(:disabled):active {
 		background-color: #444;
 	}
 
@@ -141,7 +141,28 @@
 		position: absolute;
 	}
 
-	#hand .card .index {
+	.card.black .white {
+		background-color: white;
+		color: black;
+		border-radius: 2px;
+		padding: 0 2px;
+	}
+
+	.card.black .single {
+		display: block;
+		margin-top: 0.25em;
+	}
+
+	.card.black {
+		color: white;
+		/* -webkit-transform: rotate(-1deg) translateX(5px); */
+	}
+	.card.black::before {
+		background: black;
+		box-shadow: 0 0.2em 0.5em rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+	}
+
+	.card .index {
 		position: absolute;
 		width: 1.5em;
 		height: 1.5em;
@@ -173,15 +194,6 @@
 		padding: 0 0.5em;
 		box-sizing: border-box;
 	}
-	#black .card {
-		color: white;
-		/* -webkit-transform: rotate(-1deg) translateX(5px); */
-	}
-	#black > .card::before {
-		background: black;
-		box-shadow: 0 0.2em 0.5em rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
-	}
-
 	#black.ng-enter, #black.ng-leave {
 		transition: -webkit-transform ease-in 300ms;
 	}
@@ -189,6 +201,15 @@
 	#black.ng-enter-active { -webkit-transform: translateY(0); }
 	#black.ng-leave { -webkit-transform: translateY(0); }
 	#black.ng-leave-active { -webkit-transform: translateY(110%); }
+
+	#reveal {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		overflow: auto;
+		-webkit-overflow-scrolling: touch;
+
+	}
 </style>
 	<script src="/socket.io/socket.io.js"></script>
 <!--<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular.js"></script>
@@ -207,7 +228,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		var socket = io.connect();
 		return {
 			on: function (eventName, callback) {
-				socket.on(eventName, function () {	
+				socket.on(eventName, function () {
 					var args = arguments;
 					$rootScope.$apply(function () {
 						callback.apply(socket, args);
@@ -294,9 +315,18 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			$scope.gameState = info.state;
 			$scope.players = info.players;
 			$scope.amCzar = info.czar;
-			$scope.revealCards = info.revealCards;
+			$scope.revealCards = info.playedCards;
 			$scope.blackCard = info.blackCard;
 		});
+
+		socket.on('revealed_cards', function(cards) {
+			$scope.gameState = 'reveal';
+			$scope.revealCards = cards;
+		});
+
+		$scope.winner = function(card) {
+			socket.emit('submit_winner', card);
+		};
 
 		socket.on('czar', function(){
 			$scope.amCzar = true;
@@ -306,7 +336,9 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			$scope.players = players;
 		});
 
-
+		$scope.$watch('revealCards', function() {
+			console.log('revealCards changed to: ', $scope.revealCards);
+		});
 
 		// $scope.$watch('players', function() {
 		// 		$timeout(function(){
@@ -325,6 +357,8 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 		$scope.players = [];
 
+		$scope.revealCards = [];
+
 		window.gs = $scope;
 
 		$scope.nBlanks = function() {
@@ -342,8 +376,8 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			templateUrl: 'card_stack.html',
 			scope: {
 				cards: '=',
-				nSelectable: '=',
-				selected: '='
+				nSelectable: '=?',
+				selected: '=?'
 			},
 			// link: function(scope, element, attr) {
 			// 	console.log('hit');
@@ -371,7 +405,48 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 			}
 		};
+	}).directive('cahBlackCardStack', function() {
+		return {
+			restrict: 'E',
+			replace: true,
+			templateUrl: 'black_card_stack.html',
+			scope: {
+				template: '=',
+				cards: '=',
+				czar: '=',
+				pick: '='
+			},
+			controller: function($scope) {
+				console.log($scope.cards);
+				$scope.formattedCards = $scope.cards.map(function(card){
+					var out = [];
+
+					if ($scope.template.length == 1) {
+						out.push({ type: 'black', text: $scope.template[0] });
+						out.push({ type: 'white single', text: trimmed(card[0]) });
+					} else {
+						for (var i = 0; i < $scope.template.length - 1; i++) {
+							out.push({ type: 'black', text: $scope.template[i] });
+							out.push({ type: 'white', text: trimmed(card[i]) });
+						}
+						out.push({
+							type: 'black', text: $scope.template[$scope.template.length - 1]
+						});
+					}
+					return out;
+				});
+
+				function trimmed(text){
+					if (text[text.length-1] === '.') {
+						return text.slice(0, -1);
+					} else {
+						return text;
+					}
+				}
+			}
+		}
 	})
+
 ;
 
 
