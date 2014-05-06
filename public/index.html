@@ -303,20 +303,24 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 		socket.emit('join_game', {
 			game: $routeParams.gameID, name: $scope.name
-		}, function(info){
-			if (!info) {
+		}, function(state){
+			if (!state) {
 				alert('Dang, that game doesn\u2019t exist.');
 				$location.path('/');
 				return;
 			}
-			console.log('joined:', info);
-			$scope.hand = info.hand;
-			$scope.playerID = info.id;
-			$scope.gameState = info.state;
-			$scope.players = info.players;
-			$scope.amCzar = info.czar;
-			$scope.revealCards = info.playedCards;
-			$scope.blackCard = info.blackCard;
+			console.log('joined:', state);
+
+			$scope.player = state.players[state.you];
+
+			$scope.gameState = state.state;
+			$scope.hand = $scope.player.hand;
+			$scope.game = state.game;
+			$scope.players = state.players;
+			$scope.amCzar = (state.game.czar === $scope.player.id); // Change this?
+
+			$scope.revealCards = state.game.playedCards; // FIXME names are hard
+			$scope.blackCard = state.game.blackCard;
 		});
 
 		socket.on('revealed_cards', function(cards) {
@@ -328,8 +332,9 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 			socket.emit('submit_winner', card);
 		};
 
-		socket.on('czar', function(){
-			$scope.amCzar = true;
+		socket.on('card_czar', function(czar){
+			$scope.game.czar = czar;
+			$scope.amCzar = ($scope.player.id === czar);
 		});
 
 		socket.on('players', function(players) {
@@ -423,7 +428,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 					if ($scope.template.length == 1) {
 						out.push({ type: 'black', text: $scope.template[0] });
-						out.push({ type: 'white single', text: trimmed(card[0]) });
+						out.push({ type: 'white single', text: card[0] });
 					} else {
 						for (var i = 0; i < $scope.template.length - 1; i++) {
 							out.push({ type: 'black', text: $scope.template[i] });

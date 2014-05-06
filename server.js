@@ -55,7 +55,7 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 		};
 		this.players.push(player);
 		this.playersById[player.info.id] = player;
-		socket.broadcast.to(this.id).emit("joined", {id: socket.id});
+		this.broadcast("joined", player.info);
 	}
 
 	socket
@@ -66,23 +66,23 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 				this.players.splice(index, 1);
 				delete this.playersById[player.id];
 				this.sendPlayers();
-				if (this.players.length && this.cardCzar == player) {
+				if (this.players.length && this.info.cardCzar == player) {
 					this.setCardCzar(this.players[index % this.players.length]);
 				}
 			}.bind(this), 1000);
 		}.bind(this))
 		.on('draw_black', function() {
-			if (this.cardCzar !== player) {
+			if (this.info.cardCzar !== player.info.id) {
 				console.log('a non-czar tried to draw_black', player);
 				return;
 			}
-			if (this.currentCard) {
+			if (this.info.blackCard) {
 				console.log('tried to draw a black card but one is already in play');
 				return;
 			}
-			this.currentCard = this.blackDeck.draw();
+			this.info.blackCard = this.blackDeck.draw();
 
-			this.broadcast('black_card', this.currentCard);
+			this.broadcast('black_card', this.info.blackCard);
 			this.setState('play');
 		}.bind(this))
 		.on('draw_white', function(howMany, cb) {
@@ -95,17 +95,19 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 		}.bind(this))
 		.on('submit_cards', function(cards) {
 
-			this.playedCards.push(cards);
-			if (this.playedCards.length === (this.players.length - 1)) {
+			this.info.playedCards.push(cards);
+			// TODO this state change should probably check that
+			// each player has submitted a card rather than the number of cards
+			if (this.info.playedCards.length === (this.players.length - 1)) {
 				//this.setState("reveal");
 				this.info.state = 'reveal'
-				this.broadcast("revealed_cards", this.playedCards);
+				this.broadcast("revealed_cards", this.info.playedCards);
 			} else {
-				this.broadcast("played_cards", this.playedCards.length);
+				this.broadcast("played_cards", this.info.playedCards.length);
 			}
 		}.bind(this))
 		.on("submit_winner", function(card) {
-			if (this.cardCzar !== player) {
+			if (this.info.cardCzar !== player.info.id) {
 				console.log("non-czar tried to submit_winner:", player);
 				return;
 			}
@@ -126,10 +128,8 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 		players: this.players.map(function(p){ return p.info; }),
 		you: this.players.indexOf(player),
 
-		card: this.currentCard,
+		card: this.info.blackCard,
 		state: this.info.state,
-		czar: this.cardCzar == player,
-		blackCard: this.currentCard,
 		playedCards: this.state == 'reveal' ? this.playedCards : null
 	});
 
@@ -139,8 +139,8 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 };
 
 Game.prototype.setCardCzar = function(cardCzar) {
-	this.cardCzar = cardCzar;
-	cardCzar.socket.emit('czar', true);
+	this.info.cardCzar = cardCzar.info.id;
+	this.broadcast('card_czar', this.info.cardCzar);
 };
 
 Game.prototype.setState = function(state) {

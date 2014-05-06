@@ -78,11 +78,11 @@
 
 			function joined(info) {
 				logger.log('joined game', info);
-				hand.cards = info.hand;
+				hand.cards = info.players[info.you].hand;
 			}
 
 			logger = new Logger("log", socket);
-			logger.register(['state', 'czar', 'black_card', 'revealed_cards']);
+			logger.register(['state', 'czar', 'black_card', 'revealed_cards', 'played_cards']);
 
 			foo_game.addEventListener("click", function() {
 				socket.emit("join_game", {
