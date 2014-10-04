@@ -98,7 +98,10 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 			cb && cb(cards);
 		}.bind(this))
 		.on('submit_cards', function(cards) {
-
+			if (this.playedCardsPlayers.indexOf(player) !== -1) {
+				return;
+			}
+			player.submittedCards = true;
 			this.info.playedCards.push(cards);
 			this.playedCardsPlayers.push(player);
 			// TODO this state change should probably check that
