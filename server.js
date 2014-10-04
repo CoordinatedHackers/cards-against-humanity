@@ -139,6 +139,8 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 		playedCards: this.info.state == 'reveal' ? this.playedCards : null
 	});
 
+	this.sendPlayers();
+
 	if (this.players.length === 1) {
 		this.setCardCzar(player);
 	}
