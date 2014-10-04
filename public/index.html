@@ -291,15 +291,18 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		});
 
 		socket.on('state', function(state) {
-			console.log('we get state:', state);
-			$scope.gameState = state;
+			var oldState = $scope.game.state;
+			$scope.game.state = state;
+			if ($scope.game.state === 'intermission' && oldState === 'reveal') {
+				$scope.selectedCards = [];
+			}
 		});
 
 		socket.on('submitted_cards', console.log.bind(console));
 		socket.on('played_cards', console.log.bind(console));
 
 		// intermission ->{ play ->} wait -> reveal
-		$scope.gameState = 'intermission';
+		$scope.game = { state: 'intermission' };
 
 		socket.emit('join_game', {
 			game: $routeParams.gameID, name: $scope.name
@@ -313,7 +316,6 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 			$scope.player = state.players[state.you];
 
-			$scope.gameState = state.state;
 			$scope.hand = $scope.player.hand;
 			$scope.game = state.game;
 			$scope.players = state.players;
@@ -324,7 +326,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		});
 
 		socket.on('revealed_cards', function(cards) {
-			$scope.gameState = 'reveal';
+			$scope.game.state = 'reveal';
 			$scope.revealCards = cards;
 		});
 
@@ -333,6 +335,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		};
 
 		socket.on('card_czar', function(czar){
+			console.log('card_czar', czar);
 			$scope.game.czar = czar;
 			$scope.amCzar = ($scope.player.id === czar);
 		});
@@ -367,7 +370,7 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 		window.gs = $scope;
 
 		$scope.nBlanks = function() {
-			return $scope.gameState == 'play' ? Math.max($scope.blackCard.length - 1, 1) : 0;
+			return $scope.game.state == 'play' ? Math.max($scope.blackCard.length - 1, 1) : 0;
 		}
 
 		$scope.playCards = function() {

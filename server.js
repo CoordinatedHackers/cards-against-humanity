@@ -64,15 +64,15 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 			setTimeout(function(){
 				var index = this.players.indexOf(player);
 				this.players.splice(index, 1);
-				delete this.playersById[player.id];
+				delete this.playersById[player.info.id];
 				this.sendPlayers();
-				if (this.players.length && this.info.cardCzar == player) {
+				if (this.players.length && this.info.czar == player.info.id) {
 					this.setCardCzar(this.players[index % this.players.length]);
 				}
 			}.bind(this), 1000);
 		}.bind(this))
 		.on('draw_black', function() {
-			if (this.info.cardCzar !== player.info.id) {
+			if (this.info.czar !== player.info.id) {
 				console.log('a non-czar tried to draw_black', player);
 				return;
 			}
@@ -107,7 +107,7 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 			}
 		}.bind(this))
 		.on("submit_winner", function(card) {
-			if (this.info.cardCzar !== player.info.id) {
+			if (this.info.czar !== player.info.id) {
 				console.log("non-czar tried to submit_winner:", player);
 				return;
 			}
@@ -115,7 +115,11 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 			this.setState("intermission");
 			this.broadcast("winning_card", card);
 			// TODO: Broadcast the winning card
-			// TODO: Scoring
+			this.info.blackCard = null;
+			this.info.playedCards = [];
+			this.setCardCzar(this.players[
+				(this.players.indexOf(this.playersById[this.info.czar]) + 1) % this.players.length
+			]);
 		}.bind(this))
 	;
 
@@ -124,13 +128,9 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 
 	cb && cb({
 		game: this.info,
-
 		players: this.players.map(function(p){ return p.info; }),
 		you: this.players.indexOf(player),
-
-		card: this.info.blackCard,
-		state: this.info.state,
-		playedCards: this.state == 'reveal' ? this.playedCards : null
+		playedCards: this.info.state == 'reveal' ? this.playedCards : null
 	});
 
 	if (this.players.length === 1) {
@@ -138,9 +138,11 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 	}
 };
 
-Game.prototype.setCardCzar = function(cardCzar) {
-	this.info.cardCzar = cardCzar.info.id;
-	this.broadcast('card_czar', this.info.cardCzar);
+Game.prototype.setCardCzar = function(czar) {
+	console.log('became the card czar:', czar);
+	this.info.czar = czar.info.id;
+	console.log('broadcasting card_czar', this.info.czar);
+	this.broadcast('card_czar', this.info.czar);
 };
 
 Game.prototype.setState = function(state) {
@@ -169,17 +171,9 @@ io.sockets.on("connection", function(socket) {
 		var game = new Game;
 		cb && cb(game.id);
 	}).on("join_game", function(info, cb) {
-		console.log(games);
 		var game = games[info.game]
 		if (game) { game.join(socket, info, cb); }
 		else { cb && cb(null); }
-	}).on("gamestate", function(gameID) {
-		var game = games[gameID];
-		if (game) { console.log(game); }
-
-	// Debuggin’
-	}).on("dbg_rooms", function(_, cb){
-		cb && cb(Object.keys(games));
 	});
 });
 
