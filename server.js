@@ -25,9 +25,13 @@ function Game() {
 	this.playersById = {};
 	this.whiteDeck = new Deck(cards.white);
 	this.blackDeck = new Deck(cards.black);
+	this.playedCardsPlayers = [];
 
 	this.info = {
 		playedCards: [],
+		state: "intermission",
+		czar: null,
+		blackCard: null,
 		state: "intermission",
 		czar: null,
 		blackCard: null
@@ -96,6 +100,7 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 		.on('submit_cards', function(cards) {
 
 			this.info.playedCards.push(cards);
+			this.playedCardsPlayers.push(player);
 			// TODO this state change should probably check that
 			// each player has submitted a card rather than the number of cards
 			if (this.info.playedCards.length === (this.players.length - 1)) {
@@ -106,17 +111,18 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 				this.broadcast("played_cards", this.info.playedCards.length);
 			}
 		}.bind(this))
-		.on("submit_winner", function(card) {
+		.on("submit_winner", function(cardIndex) {
 			if (this.info.czar !== player.info.id) {
 				console.log("non-czar tried to submit_winner:", player);
 				return;
 			}
-			console.log("Winning Card: ", card);
 			this.setState("intermission");
-			this.broadcast("winning_card", card);
-			// TODO: Broadcast the winning card
+			this.broadcast("winning_card", cardIndex);
+			this.playedCardsPlayers[cardIndex].info.score++;
+			this.sendPlayers();
 			this.info.blackCard = null;
 			this.info.playedCards = [];
+			this.playedCardsPlayers = [];
 			this.setCardCzar(this.players[
 				(this.players.indexOf(this.playersById[this.info.czar]) + 1) % this.players.length
 			]);
@@ -139,9 +145,7 @@ Game.prototype.join = function(socket, playerInfo, cb) {
 };
 
 Game.prototype.setCardCzar = function(czar) {
-	console.log('became the card czar:', czar);
 	this.info.czar = czar.info.id;
-	console.log('broadcasting card_czar', this.info.czar);
 	this.broadcast('card_czar', this.info.czar);
 };
 

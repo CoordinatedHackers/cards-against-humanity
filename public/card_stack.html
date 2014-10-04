@@ -1,10 +1,10 @@
 <ul id="hand">
 	<li
-		ng-repeat="card in cards" ng-click="select(card)"
-		ng-class="{ selected: isSelected(card) }"
+		ng-repeat="card in cards" ng-click="select($index)"
+		ng-class="{ selected: isSelected($index) }"
 		class="card"
 	>
 		{{card}}
-		<div ng-if="isSelected(card)" class="index">{{nSelectable == 1 ? '' : selected.indexOf(card) + 1}}</div>
+		<div ng-if="isSelected($index)" class="index">{{nSelectable == 1 ? '' : selected.indexOf($index) + 1}}</div>
 	</li>
 </ul>

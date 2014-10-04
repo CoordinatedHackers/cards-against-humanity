@@ -4,6 +4,6 @@
 		class="card black"
 	>
 		<span ng-repeat="chunk in card" ng-class="chunk.type">{{chunk.text}}</span>
-		<button ng-if="czar" ng-click="pick(card)">I choose you!</button>
+		<button ng-if="czar" ng-click="pick($index)">I choose you!</button>
 	</li>
 </ul>
