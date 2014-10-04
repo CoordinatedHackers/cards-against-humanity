@@ -5,12 +5,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 	body {
-		margin: 0;
 		padding-top: 65px;
 		font: 16px "Helvetica Neue", "Helvetica", Arial, sans-serif;
 		-webkit-user-select: none;
 		user-select: none;
+		position: relative;
+		margin: 0 auto;
 	}
+
 	#lobby {
 		margin: 0.5em;
 		background: #eef;
@@ -74,6 +76,7 @@
 		width: 100%;
 		position: fixed;
 		top: 0;
+		left: 0;
 	}
 	#scoresWrapper.scroll {
 		overflow: auto;
@@ -181,7 +184,8 @@
 	#black {
 		bottom: 0;
 		position: fixed;
-		width: 100%;
+		width: 400px;
+		max-width: 2
 		padding: 0 0.5em;
 		box-sizing: border-box;
 	}
@@ -194,12 +198,11 @@
 	#black.ng-leave-active { -webkit-transform: translateY(110%); }
 
 	#reveal {
-		position: absolute;
-		top: 0;
-		bottom: 0;
 		overflow: auto;
 		padding: 2em 1em;
-		margin: 0;
+		margin: 0 auto;
+		max-width: 400px;
+		height: 100%;
 		-webkit-overflow-scrolling: touch;
 	}
 </style>
@@ -448,5 +451,5 @@ angular.module('cards', ['ngRoute', 'ngAnimate', 'ngTouch'])
 
 
 </script>
-<body ng-app="cards">
+<body class=contained ng-app="cards">
 <div ng-view></div>
